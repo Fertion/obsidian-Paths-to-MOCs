@@ -1,0 +1,30 @@
+.paths-to-mocs-header-container {
+    margin-top: 2px; /* margin at the top */
+    margin-bottom: 2px; /* margin at the bottom */
+    padding: 5px; /* inner padding */
+    border-radius: 4px; /* rounded corners */
+    background-color: rgba(248, 248, 248, 0.1); /* Light gray background with 10% opacity */
+    border: 1px solid rgba(221, 221, 221, 0.1); /* Gray border with opacity */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.path-wrapper {
+    padding: 1px 0; /* vertical padding between path lines */
+}
+
+.path-divider {
+    height: 1px;
+    background-color: rgba(204, 204, 204, 0.15); /* Solid gray color for line */
+    margin: 2px 0; /* margin above and below the line */
+}
+
+.paths-to-mocs-header-link {
+    color: var(--color-accent); /* Uses the accent color from Obsidian settings */
+    text-decoration: none;
+    font-size: 0.9em; /* text size */
+}
+
+.paths-to-mocs-header-link:hover {
+    text-decoration: underline; /* Underline on hover */
+}
