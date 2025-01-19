@@ -39,8 +39,11 @@ module.exports = class PathsToMOCsPlugin extends Plugin {
                 this.pathCache.clear();
                 this.parentNotesCache.clear();
                 const currentFile = this.app.workspace.getActiveFile();
-                if (currentFile) {
+                if (currentFile && !this.isExcluded(currentFile.path)) {
                     await this.updateAllPathsAndHeaders(currentFile.path);
+                } else {
+                    this.updateSidebarPaths([]);
+                    this.updateVisibleHeaders();
                 }
             },
         });
@@ -119,6 +122,11 @@ module.exports = class PathsToMOCsPlugin extends Plugin {
     }
 
     async updateAllPathsAndHeaders(currentNotePath) {
+        if (this.isExcluded(currentNotePath)) {
+            this.updateSidebarPaths([]);
+            this.updateVisibleHeadersForPath(currentNotePath, []);
+            return;
+        }
         const paths = await this.calculatePaths(currentNotePath);
         this.updateSidebarPaths(paths);
         this.updateVisibleHeadersForPath(currentNotePath, paths);
@@ -149,6 +157,10 @@ module.exports = class PathsToMOCsPlugin extends Plugin {
     }
 
     async calculatePaths(startNotePath) {
+        if (this.isExcluded(startNotePath)) {
+            return [];
+        }
+
         if (this.settings.enableCaching && this.pathCache.has(startNotePath)) {
             return this.pathCache.get(startNotePath);
         }
@@ -355,6 +367,11 @@ module.exports = class PathsToMOCsPlugin extends Plugin {
 
         const currentNotePath = leaf.view.file?.path;
         if (!currentNotePath) {
+            this.removeHeaderPathElement(leaf);
+            return;
+        }
+
+        if (this.isExcluded(currentNotePath)) {
             this.removeHeaderPathElement(leaf);
             return;
         }
@@ -667,6 +684,11 @@ class PathsToMOCsView extends ItemView {
     async updatePaths(paths = []) {
         const container = this.container;
         container.empty();
+
+        const currentFile = this.app.workspace.getActiveFile();
+        if (currentFile && this.plugin.isExcluded(currentFile.path)) {
+            return; // Do not display "No paths found" if the current file is excluded
+        }
 
         const pathsContainer = container.createDiv({ cls: 'paths-to-mocs-header-container' });
 
