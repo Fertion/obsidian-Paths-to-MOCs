@@ -1,11 +1,11 @@
 {
 	"id": "paths_to_mocs",
 	"name": "Paths to MOCs",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"minAppVersion": "1.0.0",
 	"description": "Displays a navigation bar showing the paths from Maps of Content (MOCs) to the current note. The panels are displayed above the note content or in the side pane.",
 	"author": "Fertion",
-	"authorUrl": "",
+	"authorUrl": "https://github.com/Fertion",
 	"helpUrl": "",
 	"isDesktopOnly": false
 	}
