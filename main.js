@@ -184,35 +184,33 @@ module.exports = class PathsToMOCsPlugin extends Plugin {
             const parentNotes = await this.getParentNotes(currentNotePath);
             for (const parentNote of parentNotes) {
                 if (!currentPath.includes(parentNote)) {
-                   paths.push([parentNote, ...currentPath])
                     queue.push([parentNote, [parentNote, ...currentPath]]);
-                 }
+                }
             }
             if (parentNotes.length === 0 && currentPath.length > 1) {
-               paths.push(currentPath);
+                paths.push(currentPath);
             }
         }
 
-        const filteredPaths = this.filterSubPaths(paths);
+        const filteredPaths = this.filterSubPaths(paths.map(p => p.reverse()));
+        const reversedFilteredPaths = filteredPaths.map(p => p.reverse());
 
         if (this.settings.enableCaching) {
-            this.pathCache.set(startNotePath, filteredPaths);
+            this.pathCache.set(startNotePath, reversedFilteredPaths);
         }
 
-        return filteredPaths;
+        return reversedFilteredPaths;
     }
 
      filterSubPaths(paths) {
         return paths.filter((path, index, self) => {
             return !self.some((otherPath, otherIndex) => {
                 if (index === otherIndex) return false;
-                if (otherPath.length <= path.length) return false;
-                const diff = otherPath.length - path.length;
-                return otherPath.slice(diff).every((note, idx) => note === path[idx]);
+                if (otherPath.length < path.length) return false; // Only consider longer paths
+                return otherPath.slice(-path.length).every((note, idx) => note === path[idx]);
             });
         });
     }
-
 
     async getParentNotes(notePath) {
         if (this.settings.enableCaching && this.parentNotesCache.has(notePath)) {
@@ -232,6 +230,31 @@ module.exports = class PathsToMOCsPlugin extends Plugin {
                 dest = this.app.metadataCache.getFirstLinkpathDest(linkText + ".md", sourcePath);
             }
             return dest?.path;
+        };
+
+        // Helper function to check if a link exists in the "Up" properties of a given file
+        const isLinkedAsUp = (linkedFile, targetNotePath) => {
+            const upProperties = this.settings.propertyUp.split(',').map(p => p.trim());
+            const metadata = this.app.metadataCache.getFileCache(linkedFile);
+            for (const propertyUp of upProperties) {
+                if (metadata?.frontmatter?.[propertyUp]) {
+                    const upLinks = Array.isArray(metadata.frontmatter[propertyUp])
+                        ? metadata.frontmatter[propertyUp]
+                        : [metadata.frontmatter[propertyUp]];
+                    for (const link of upLinks) {
+                        try {
+                            const linkWithoutAlias = link.replace(/\|.*$/, '');
+                            const linkedFilePath = resolveLink(linkWithoutAlias.replace("[[", "").replace("]]", ""), linkedFile.path);
+                            if (linkedFilePath === targetNotePath) {
+                                return true;
+                            }
+                        } catch (error) {
+                            console.error("Error processing link in 'Up' property:", link, error);
+                        }
+                    }
+                }
+            }
+            return false;
         };
 
         // Check for parent notes via "Up" property
@@ -311,7 +334,10 @@ module.exports = class PathsToMOCsPlugin extends Plugin {
 
                     for (const tag of mocTagsArray) {
                         if (tags.has(tag)) {
-                            parentNotes.add(linkedFilePath);
+                            // Check if the link to the current note comes from an "Up" property of the MOC note
+                            if (!isLinkedAsUp(linkedFile, notePath)) {
+                                parentNotes.add(linkedFilePath);
+                            }
                             break;
                         }
                     }
@@ -651,7 +677,6 @@ class PathsToMOCsSettingTab extends PluginSettingTab {
 class PathsToMOCsView extends ItemView {
     constructor(leaf, plugin) {
         super(leaf);
-        this.plugin = plugin;
         this.contentEl.style.overflow = 'auto'; // Enable scroll for the view content
     }
 
