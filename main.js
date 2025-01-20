@@ -182,16 +182,14 @@ module.exports = class PathsToMOCsPlugin extends Plugin {
             }
 
             const parentNotes = await this.getParentNotes(currentNotePath);
-
-            if (parentNotes.length === 0 && currentPath.length > 1) {
-                paths.push(currentPath);
-                continue;
-            }
-
             for (const parentNote of parentNotes) {
                 if (!currentPath.includes(parentNote)) {
+                   paths.push([parentNote, ...currentPath])
                     queue.push([parentNote, [parentNote, ...currentPath]]);
-                }
+                 }
+            }
+            if (parentNotes.length === 0 && currentPath.length > 1) {
+               paths.push(currentPath);
             }
         }
 
@@ -203,6 +201,18 @@ module.exports = class PathsToMOCsPlugin extends Plugin {
 
         return filteredPaths;
     }
+
+     filterSubPaths(paths) {
+        return paths.filter((path, index, self) => {
+            return !self.some((otherPath, otherIndex) => {
+                if (index === otherIndex) return false;
+                if (otherPath.length <= path.length) return false;
+                const diff = otherPath.length - path.length;
+                return otherPath.slice(diff).every((note, idx) => note === path[idx]);
+            });
+        });
+    }
+
 
     async getParentNotes(notePath) {
         if (this.settings.enableCaching && this.parentNotesCache.has(notePath)) {
@@ -236,7 +246,8 @@ module.exports = class PathsToMOCsPlugin extends Plugin {
 
                     for (const link of links) {
                         try {
-                            const linkedFilePath = resolveLink(link.replace("[[", "").replace("]]", ""), notePath);
+                            const linkWithoutAlias = link.replace(/\|.*$/, '');
+                            const linkedFilePath = resolveLink(linkWithoutAlias.replace("[[", "").replace("]]", ""), notePath);
                             if (linkedFilePath && !this.isExcluded(linkedFilePath)) {
                                 parentNotes.add(linkedFilePath);
                             }
@@ -265,7 +276,8 @@ module.exports = class PathsToMOCsPlugin extends Plugin {
 
                             if (downLinks.some(link => {
                                 try {
-                                    return resolveLink(link.replace("[[", "").replace("]]", ""), linkedFilePath) === notePath;
+                                    const linkWithoutAlias = link.replace(/\|.*$/, '');
+                                    return resolveLink(linkWithoutAlias.replace("[[", "").replace("]]", ""), linkedFilePath) === notePath;
                                 } catch (error) {
                                     console.error("Error resolving link:", link, error);
                                     return false;
@@ -348,15 +360,6 @@ module.exports = class PathsToMOCsPlugin extends Plugin {
             this.parentNotesCache.set(notePath, parentNotesArray);
         }
         return parentNotesArray;
-    }
-
-    filterSubPaths(paths) {
-        return paths.filter(path => {
-            return !paths.some(otherPath =>
-                otherPath.length > path.length &&
-                otherPath.slice(0, path.length).every((note, idx) => note === path[idx])
-            );
-        });
     }
 
     async displayHeaderPaths(leaf, paths) {
