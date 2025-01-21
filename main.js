@@ -167,15 +167,9 @@ module.exports = class PathsToMOCsPlugin extends Plugin {
 
         const paths = [];
         const queue = [[startNotePath, [startNotePath]]]; // [currentNotePath, currentPath]
-        const visited = new Set();
 
         while (queue.length > 0) {
             const [currentNotePath, currentPath] = queue.shift();
-
-            if (visited.has(currentNotePath)) {
-                continue;
-            }
-            visited.add(currentNotePath);
 
             if (currentPath.length > this.settings.maxDepth) {
                 continue; // Stop exploring this path if max depth is reached
